@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projectile Motion Basketball Simulation — F5 Physics</title>
+<style>
+:root{--bg:#f0f2f5;--card:#fff;--pri:#2563eb;--suc:#16a34a;--dan:#dc2626;--gold:#d97706;--txt:#1e293b;--mut:#64748b;--brd:#cbd5e1;--rad:10px;--sh:0 2px 8px rgba(0,0,0,.1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:15px;overflow-x:hidden}
+header{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:10px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+header h1{font-size:1.25em;white-space:nowrap}
+#headerScenario{background:rgba(255,255,255,.2);padding:4px 14px;border-radius:20px;font-size:.88em}
+#headerTimer{margin-left:auto;font-size:1.2em;font-weight:bold;min-width:150px;text-align:right}
+.timer-active{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+nav.tabs{display:flex;background:#fff;border-bottom:2px solid var(--brd);overflow-x:auto;position:sticky;top:52px;z-index:99}
+nav.tabs button{flex:1;min-width:90px;padding:12px 6px;border:none;background:transparent;font-size:.95em;cursor:pointer;border-bottom:3px solid transparent;color:var(--mut);font-weight:600;transition:.2s}
+nav.tabs button.active{color:var(--pri);border-bottom-color:var(--pri);background:#eff6ff}
+nav.tabs button:hover{background:#f1f5f9}
+.tab-panel{display:none;padding:12px;max-width:1600px;margin:0 auto}
+.tab-panel.active{display:block}
+.card{background:var(--card);border-radius:var(--rad);box-shadow:var(--sh);padding:16px;margin-bottom:14px}
+.card h3{font-size:1.05em;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--brd)}
+.sim-layout{display:grid;grid-template-columns:1fr 370px;gap:14px}
+@media(max-width:950px){.sim-layout{grid-template-columns:1fr}}
+canvas#simCanvas{width:100%;background:#111;border-radius:var(--rad);cursor:crosshair}
+.form-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.form-row label{min-width:100px;font-weight:600;font-size:.93em}
+.form-row input,.form-row select,.form-row textarea{padding:8px 10px;border:1px solid var(--brd);border-radius:6px;font-size:1em;flex:1;min-width:0}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.form-row input[type=number]{max-width:140px}
+textarea{resize:vertical;min-height:48px}
+button{padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:.93em;font-weight:600;transition:.15s}
+button:active{transform:scale(.97)}
+.btn-pri{background:var(--pri);color:#fff}.btn-pri:hover{background:#1d4ed8}
+.btn-suc{background:var(--suc);color:#fff}.btn-suc:hover{background:#15803d}
+.btn-dan{background:var(--dan);color:#fff}.btn-dan:hover{background:#b91c1c}
+.btn-gld{background:var(--gold);color:#fff}.btn-gld:hover{background:#b45309}
+.btn-out{background:transparent;border:2px solid var(--brd);color:var(--txt)}.btn-out:hover{background:#f1f5f9}
+.btn-sm{padding:5px 12px;font-size:.83em}
+button:disabled{opacity:.45;cursor:not-allowed}
+.grp-sel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.grp-sel button{padding:10px;border:2px solid var(--brd);border-radius:8px;background:#fff;font-size:1em;font-weight:700}
+.grp-sel button.sel{background:var(--pri);color:#fff;border-color:var(--pri)}
+.grp-sel button.won{background:var(--suc);color:#fff;border-color:var(--suc)}
+.anim-ctrls{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+details.coll>summary{cursor:pointer;font-weight:700;padding:10px;background:#f8fafc;border-radius:6px;list-style:none;user-select:none}
+details.coll>summary::marker,details.coll>summary::-webkit-details-marker{display:none}
+details.coll>summary::before{content:'▶ ';font-size:.8em;transition:.2s;display:inline-block}
+details.coll[open]>summary::before{transform:rotate(90deg)}
+table{width:100%;border-collapse:collapse;font-size:.88em}
+th,td{padding:7px 5px;text-align:center;border-bottom:1px solid var(--brd)}
+th{background:#f8fafc;font-weight:700;position:sticky;top:0}
+tr.hit-r{background:#dcfce7}tr.miss-r{background:#fef2f2}tr.late-r{background:#fef9c3}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.stat-box{text-align:center;padding:12px;border-radius:8px;background:#f8fafc}
+.stat-box .val{font-size:1.7em;font-weight:800;color:var(--pri)}
+.stat-box .lbl{font-size:.78em;color:var(--mut)}
+.prog-bar{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-top:4px}
+.prog-bar .fill{height:100%;transition:width .3s}
+.diag{background:#fffbeb;border-left:4px solid var(--gold);padding:10px;margin-top:10px;border-radius:0 6px 6px 0;font-size:.9em;line-height:1.6}
+.hint-box{background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:8px;font-size:.86em;line-height:1.7}
+.hint-box li{margin-left:16px;margin-bottom:4px}
+.note-bar{background:#fef3c7;padding:8px 14px;font-size:.8em;color:#92400e;text-align:center}
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;justify-content:center;align-items:center}
+#modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:16px;padding:28px;max-width:520px;width:92%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:mIn .3s}
+@keyframes mIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-box h2{font-size:1.4em;margin-bottom:12px}
+.modal-box .rank{font-size:2.8em;font-weight:900;margin:8px 0}
+.modal-box .spins{font-size:1.2em;color:var(--gold);font-weight:700}
+#confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:250}
+.wheel-wrap{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;justify-content:center}
+canvas#wheelCanvas{border-radius:50%;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.wheel-info{flex:1;min-width:260px}
+.log-scroll{max-height:380px;overflow-y:auto}
+.refl-box{background:#fef2f2;border:1px solid #fecaca;padding:12px;border-radius:8px;margin-top:10px}
+.refl-box label{display:block;padding:4px 0;cursor:pointer}
+.teach-flow{display:flex;gap:10px;justify-content:center;margin:14px 0;flex-wrap:wrap}
+.teach-flow .step{padding:9px 16px;border-radius:20px;background:#e2e8f0;font-weight:700;font-size:.9em}
+.teach-flow .step.on{background:var(--pri);color:#fff}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.78em;font-weight:700;color:#fff}
+.b-hit{background:var(--suc)}.b-miss{background:var(--dan)}.b-late{background:var(--gold)}
+.sc-tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.82em;font-weight:700;color:#fff;margin:2px}
+.sc1{background:#3b82f6}.sc2{background:#8b5cf6}.sc3{background:#ef4444}
+</style>
+</head>
+<body>
+<header>
+<h1>🏀 Projectile Motion Simulation</h1>
+<span id="headerScenario">Scenario 2</span>
+<span id="headerTimer">⏱ Not Started</span>
+</header>
+<div class="note-bar">This version uses local IndexedDB. Data syncs only within the same browser on the same device. Student devices will NOT auto-sync to the teacher's computer.</div>
+<nav class="tabs" id="mainTabs">
+<button class="active" data-tab="tab-sim">🎯 Simulation</button>
+<button data-tab="tab-dash">📊 Dashboard</button>
+<button data-tab="tab-wheel">🎡 Reward Wheel</button>
+<button data-tab="tab-data">⚙️ Settings</button>
+</nav>
+
+<div class="tab-panel active" id="tab-sim">
+<div class="sim-layout">
+<div>
+<div class="card">
+<canvas id="simCanvas" width="900" height="480"></canvas>
+<div class="anim-ctrls">
+<button class="btn-out btn-sm" id="btnPlay" disabled>▶ Play</button>
+<button class="btn-out btn-sm" id="btnReplay" disabled>🔄 Replay</button>
+<button class="btn-out btn-sm" id="btnTrail">Trail: ON</button>
+<button class="btn-out btn-sm" id="btnSlow">Slow-Mo: OFF</button>
+<button class="btn-out btn-sm" id="btnGrid">Grid: OFF</button>
+<span id="animInfo" style="margin-left:auto;font-size:.83em;color:var(--mut)"></span>
+</div>
+</div>
+<div id="diagPanel" class="diag" style="display:none"></div>
+<div id="teachFlowBox" style="display:none">
+<div class="teach-flow">
+<span class="step on" id="tf1">① Write Equations</span>
+<span class="step" id="tf2">② Input Calculated Speed</span>
+<span class="step" id="tf3">③ Verify with Simulation</span>
+</div>
+</div>
+<div id="reflBox" class="refl-box" style="display:none">
+<strong>Reflect: What was your most likely error?</strong><br>
+<label><input type="radio" name="refl" value="vert_disp"> Vertical displacement error</label>
+<label><input type="radio" name="refl" value="time_sub"> Common time t substitution error</label>
+<label><input type="radio" name="refl" value="sign"> Sign convention error</label>
+<label><input type="radio" name="refl" value="unit"> Unit error</label>
+<label><input type="radio" name="refl" value="calc"> Calculation error</label>
+<button class="btn-pri btn-sm" id="btnRefl" style="margin-top:6px">Submit Reflection</button>
+</div>
+</div>
+
+<div>
+<div class="card">
+<h3>🎯 Student Input</h3>
+<div class="grp-sel" id="grpSel"></div>
+<div class="form-row"><label>Speed u (m/s)</label><input type="number" id="inpU" min="0" step="0.01" placeholder="Enter calculated speed"></div>
+<div class="form-row"><textarea id="inpNote" placeholder="Briefly describe your equations / calculation approach, e.g. horizontal eq, vertical eq, common time t."></textarea></div>
+<label style="display:flex;align-items:center;gap:6px;margin:10px 0;font-size:.88em;cursor:pointer">
+<input type="checkbox" id="chkDone"> We have finished our calculations. This simulation is for verification only.</label>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<button class="btn-suc" id="btnShoot" disabled style="flex:1;padding:14px;font-size:1.1em">🏀 Shoot!</button>
+<button class="btn-out" id="btnClear">Clear</button>
+<button class="btn-pri" id="btnNext">Next Group ➜</button>
+</div>
+<div id="grpStatus" style="margin-top:8px;font-size:.86em;color:var(--mut)"></div>
+</div>
+
+<details class="coll card">
+<summary>💡 Modelling Hints</summary>
+<div style="padding:10px 0">
+<div class="hint-box"><ol>
+<li>Separate horizontal displacement from vertical displacement.</li>
+<li>Horizontal &amp; vertical motion share the same time <em>t</em>.</li>
+<li>For different heights, do NOT directly use the same-level range formula.</li>
+<li>For a moving target, write the target position as a function of time.</li>
+<li>The simulation is for verifying your model, NOT for random guessing.</li>
+</ol></div>
+</div>
+</details>
+
+<details class="coll card" id="ansPanel">
+<summary>🔒 Teacher Answer Key</summary>
+<div style="padding:10px 0">
+<div class="form-row"><label>Passcode</label><input type="password" id="inpPass" placeholder="Enter passcode"><button class="btn-pri btn-sm" id="btnUnlock">Unlock</button></div>
+<div id="ansContent" style="display:none;margin-top:10px;padding:12px;background:#f0fdf4;border-radius:8px"></div>
+</div>
+</details>
+</div>
+</div>
+</div>
+
+<div class="tab-panel" id="tab-dash">
+<div class="card" id="timerCard">
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+<h3 style="margin:0;border:none;padding:0">⏱ Timed Challenge</h3>
+<span id="dTimerSt" class="badge" style="background:var(--mut)">Not Started</span>
+<span id="dTimerTm" style="font-size:1.4em;font-weight:800;margin-left:auto">--:--</span>
+</div>
+<div class="prog-bar" style="margin-top:8px"><div class="fill" id="timerBar" style="width:0;background:var(--pri)"></div></div>
+</div>
+<div class="stat-grid">
+<div class="stat-box"><div class="val" id="stSuc">0</div><div class="lbl">Groups Scored</div></div>
+<div class="stat-box"><div class="val" id="stAtt">0</div><div class="lbl">Total Attempts</div></div>
+<div class="stat-box"><div class="val" id="stFast">--</div><div class="lbl">Fastest Group</div></div>
+<div class="stat-box"><div class="val" id="stLast">--</div><div class="lbl">Latest Attempt</div></div>
+</div>
+<div class="card"><h3>🏆 Leaderboard</h3>
+<div style="overflow-x:auto"><table><thead><tr><th>Group</th><th>Status</th><th>Rank</th><th>Spins</th><th>Used</th><th>Left</th><th>Attempts</th><th>Last Speed</th><th>Last Result</th></tr></thead><tbody id="lbBody"></tbody></table></div>
+</div>
+<div class="card"><h3>📋 Attempt Log</h3>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+<select id="fltGrp"><option value="">All Groups</option></select>
+<select id="fltRes"><option value="">All Results</option><option value="1">Scored</option><option value="0">Missed</option></select>
+<select id="fltSc"><option value="">All Scenarios</option><option value="1">Scenario 1</option><option value="2">Scenario 2</option><option value="3">Scenario 3</option></select>
+</div>
+<div class="log-scroll"><table><thead><tr><th>#</th><th>Grp</th><th>Sc.</th><th>Speed</th><th>Result</th><th>Flight t</th><th>Miss Dist</th><th>Diagnostic</th><th>Time</th></tr></thead><tbody id="logBody"></tbody></table></div>
+</div>
+<div class="card" id="miscCard" style="display:none"><h3>📝 Misconception Statistics</h3><div id="miscStats"></div></div>
+</div>
+
+<div class="tab-panel" id="tab-wheel">
+<div class="card"><h3>🎡 Classroom Reward Wheel</h3>
+<div class="wheel-wrap">
+<div style="position:relative"><canvas id="wheelCanvas" width="400" height="400"></canvas>
+<div style="position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:2em;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))">▼</div></div>
+<div class="wheel-info">
+<div class="form-row"><label>Select Group</label><select id="wGrp"></select></div>
+<div id="wSpinInfo" style="margin:8px 0;font-size:1.05em;font-weight:700"></div>
+<button class="btn-gld" id="btnSpin" disabled style="width:100%;padding:14px;font-size:1.15em;margin-bottom:12px">🎰 Spin the Wheel!</button>
+<div id="wResult" style="font-size:1.3em;font-weight:800;text-align:center;min-height:40px"></div>
+<h3 style="margin-top:16px">Spin History</h3>
+<div class="log-scroll"><table><thead><tr><th>Group</th><th>Prize</th><th>Time</th></tr></thead><tbody id="wLogBody"></tbody></table></div>
+</div>
+</div></div>
+</div>
+
+<div class="tab-panel" id="tab-data">
+<div class="card"><h3>⚙️ Teacher Settings</h3>
+<div class="form-row"><label>Scenario</label><select id="setSc">
+<option value="1">Scenario 1: Same-Level Fixed Hoop</option>
+<option value="2" selected>Scenario 2: Different-Height Fixed Hoop</option>
+<option value="3">Scenario 3: Same-Level Moving Hoop</option>
+</select></div>
+<div class="form-row"><label>Launch Angle θ (°)</label><input type="number" id="setAng" value="45" min="1" max="89" step="1"></div>
+<div class="form-row"><label>Distance D (m)</label><input type="number" id="setD" value="10" min="0.1" step="0.1"></div>
+<div class="form-row" id="rowH"><label>Height h (m)</label><input type="number" id="setH" value="1.5" step="0.1"></div>
+<div class="form-row" id="rowVt" style="display:none"><label>Hoop Speed v<sub>T</sub> (m/s)</label><input type="number" id="setVt" value="1.0" step="0.1"></div>
+<div class="form-row"><label>Gravity g (m/s²)</label><input type="number" id="setG" value="9.81" min="0.1" step="0.01"></div>
+<div class="form-row"><label>Vert. Tolerance (m)</label><input type="number" id="setTV" value="0.25" min="0.01" step="0.01"></div>
+<div class="form-row"><label>Horiz. Tolerance (m)</label><input type="number" id="setTH" value="0.25" min="0.01" step="0.01"></div>
+<div class="form-row"><label>Time Limit (min)</label><input type="number" id="setTL" value="10" min="1" max="60" step="1"></div>
+<div class="form-row"><label>Max Attempts/Grp</label><input type="number" id="setMA" value="0" min="0" step="1"><span style="font-size:.8em;color:var(--mut);margin-left:4px">0 = unlimited</span></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+<button class="btn-pri" id="btnApply">Apply Settings</button>
+<button class="btn-suc" id="btnStart">🚀 Start Challenge</button>
+<button class="btn-gld" id="btnPause" disabled>⏸ Pause</button>
+<button class="btn-dan btn-sm" id="btnReset">Reset Round</button>
+</div>
+<label style="display:flex;align-items:center;gap:6px;margin-top:14px;cursor:pointer">
+<input type="checkbox" id="chkTeach"> Teaching Segment Mode (for filming a 15-min lesson clip)</label>
+</div>
+<div class="card"><h3>💾 Data Management</h3>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+<button class="btn-pri btn-sm" id="btnExp">📤 Export JSON</button>
+<label class="btn-out btn-sm" style="cursor:pointer">📥 Import JSON<input type="file" id="fileImp" accept=".json" style="display:none"></label>
+<button class="btn-dan btn-sm" id="btnClrAll">🗑 Clear All Records</button>
+</div>
+</div>
+<div class="card"><h3>🎡 Prize Editor</h3>
+<div id="prizeEd"></div>
+<button class="btn-out btn-sm" id="btnSavePrz" style="margin-top:8px">Save Prizes</button>
+</div>
+</div>
+
+<div id="modal-overlay"><div class="modal-box" id="modalBox"></div></div>
+<canvas id="confetti-canvas"></canvas>
+
+<script>
+/* ================================================================
+   PROJECTILE MOTION BASKETBALL SIMULATION — FULL JS
+   ================================================================ */
+
+// ==================== CONFIG ====================
+const DB_NAME='ProjectileBasketballClassDB';
+const DB_VER=4;
+const NUM_G=8;
+const SPINS=[5,3,2,1,1,1,1,1];
+const DEF_PRIZES=['+ 1 Mark','+ 2 Marks','Small Gift','Skip 1 Correction','Priority Seating','Mystery Prize','Sticker Award','Spin Again'];
+const PASSCODE='teacher';
+const WCOLORS=['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e'];
+
+// ==================== STATE ====================
+const A={
+  db:null,bc:null,mem:false,
+  set:{sc:2,ang:45,D:10,h:1.5,vt:1.0,g:9.81,tV:.25,tH:.25,tl:10,ma:0},
+  rnd:{id:null,start:null,end:null,st:'idle',pauseAt:null},
+  tmr:null,
+  grp:1,
+  gd:Array.from({length:NUM_G},()=>({att:0,lsu:null,lr:null,rank:null,sp:0,su:0,late:false})),
+  so:[],
+  prz:[...DEF_PRIZES],
+  an:{on:false,pau:false,t:0,te:0,trail:[],last:null,showT:true,slow:false,grid:false,raf:null},
+  tUnlk:false,tMode:false,reflNeed:{},
+  poll:null
+};
+
+const $=id=>document.getElementById(id);
+const d2r=d=>d*Math.PI/180;
+const fn=(n,d=2)=>typeof n==='number'?n.toFixed(d):'--';
+const ts=t=>{const d=new Date(t);return[d.getHours(),d.getMinutes(),d.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');};
+
+// ==================== INDEXEDDB ====================
+function openDB(){return new Promise((ok,no)=>{
+  if(!window.indexedDB){A.mem=true;no('No IndexedDB');return;}
+  const r=indexedDB.open(DB_NAME,DB_VER);
+  r.onupgradeneeded=e=>{
+    const db=e.target.result;
+    if(!db.objectStoreNames.contains('attempts')){const s=db.createObjectStore('attempts',{keyPath:'id',autoIncrement:true});s.createIndex('groupId','groupId');s.createIndex('timestamp','timestamp');s.createIndex('hit','hit');s.createIndex('scenario','scenario');}
+    if(!db.objectStoreNames.contains('successes'))db.createObjectStore('successes',{keyPath:'groupId'});
+    if(!db.objectStoreNames.contains('settings'))db.createObjectStore('settings',{keyPath:'key'});
+    if(!db.objectStoreNames.contains('wheelResults')){const s=db.createObjectStore('wheelResults',{keyPath:'id',autoIncrement:true});s.createIndex('groupId','groupId');s.createIndex('timestamp','timestamp');}
+    if(!db.objectStoreNames.contains('rounds'))db.createObjectStore('rounds',{keyPath:'roundId'});
+  };
+  r.onsuccess=e=>{A.db=e.target.result;ok();};
+  r.onerror=e=>no(e);
+});}
+function dbP(store,data){return new Promise((ok,no)=>{if(!A.db){ok();return;}const tx=A.db.transaction(store,'readwrite');const r=tx.objectStore(store).put(data);r.onsuccess=()=>ok(r.result);r.onerror=e=>no(e);});}
+function dbA(store,data){return new Promise((ok,no)=>{if(!A.db){ok();return;}const tx=A.db.transaction(store,'readwrite');const r=tx.objectStore(store).add(data);r.onsuccess=()=>ok(r.result);r.onerror=e=>no(e);});}
+function dbGA(store){return new Promise((ok,no)=>{if(!A.db){ok([]);return;}const tx=A.db.transaction(store);const r=tx.objectStore(store).getAll();r.onsuccess=()=>ok(r.result);r.onerror=e=>no(e);});}
+function dbG(store,key){return new Promise((ok,no)=>{if(!A.db){ok(null);return;}const tx=A.db.transaction(store);const r=tx.objectStore(store).get(key);r.onsuccess=()=>ok(r.result);r.onerror=e=>no(e);});}
+function dbC(store){return new Promise((ok,no)=>{if(!A.db){ok();return;}const tx=A.db.transaction(store,'readwrite');tx.objectStore(store).clear().onsuccess=()=>ok();});}
+
+async function saveAtt(d){const id=await dbA('attempts',d);d.id=id;bc('att',d);return id;}
+async function saveSuc(d){await dbP('successes',d);bc('suc',d);}
+async function updSU(gid,u){const s=await dbG('successes',gid);if(s){s.spinsUsed=u;await dbP('successes',s);}}
+async function saveWR(d){await dbA('wheelResults',d);bc('wr',d);}
+async function saveSt(){await dbP('settings',{key:'cur',value:A.set});}
+async function loadSt(){const r=await dbG('settings','cur');if(r)Object.assign(A.set,r.value);}
+async function savePrz(){await dbP('settings',{key:'prz',value:A.prz});}
+async function loadPrz(){const r=await dbG('settings','prz');if(r&&Array.isArray(r.value))A.prz=r.value;}
+async function saveRnd(){await dbP('rounds',{roundId:A.rnd.id,start:A.rnd.start,end:A.rnd.end,st:A.rnd.st,tl:A.set.tl,set:{...A.set}});}
+
+async function resetRnd(){
+  A.rnd={id:Date.now(),start:null,end:null,st:'idle',pauseAt:null};
+  A.so=[];
+  A.gd.forEach(g=>{g.rank=null;g.sp=0;g.su=0;g.late=false;});
+  await dbC('successes');await saveRnd();stopTmr();bc('rst',{});
+}
+async function clearAll(){
+  for(const s of['attempts','successes','settings','wheelResults','rounds'])await dbC(s);
+  A.so=[];A.gd.forEach(g=>Object.assign(g,{att:0,lsu:null,lr:null,rank:null,sp:0,su:0,late:false}));
+  A.rnd={id:Date.now(),start:null,end:null,st:'idle',pauseAt:null};
+  stopTmr();bc('clr',{});
+}
+async function exportData(){
+  const d={attempts:await dbGA('attempts'),successes:await dbGA('successes'),wheelResults:await dbGA('wheelResults'),settings:A.set,prizes:A.prz,rounds:await dbGA('rounds'),exportTime:Date.now()};
+  const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='projectile_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href);
+}
+async function importData(json){
+  try{
+    const d=JSON.parse(json);
+    for(const s of['attempts','successes','wheelResults','rounds'])await dbC(s);
+    if(d.attempts)for(const a of d.attempts){delete a.id;await dbA('attempts',a);}
+    if(d.successes)for(const s of d.successes)await dbP('successes',s);
+    if(d.wheelResults)for(const w of d.wheelResults){delete w.id;await dbA('wheelResults',w);}
+    if(d.rounds)for(const r of d.rounds)await dbP('rounds',r);
+    if(d.settings)Object.assign(A.set,d.settings);
+    if(d.prizes)A.prz=d.prizes;
+    await saveSt();await savePrz();
+    modal('<h2>✅ Import Successful</h2><p>All data imported.</p><button class="btn-pri" onclick="closeM();refreshAll()">OK</button>');
+  }catch(e){modal('<h2>❌ Import Failed</h2><p>'+e.message+'</p><button class="btn-pri" onclick="closeM()">OK</button>');}
+}
+
+// ==================== BROADCAST ====================
+function initBC(){try{A.bc=new BroadcastChannel('proj_sim');A.bc.onmessage=()=>refreshAll();}catch(e){}}
+function bc(t,d){try{if(A.bc)A.bc.postMessage({t,d});}catch(e){}}
+
+// ==================== PHYSICS ====================
+function compute(u,s){
+  const{sc,ang,D,h,vt,g,tV,tH}=s;
+  const th=d2r(ang),ct=Math.cos(th),st=Math.sin(th);
+  const R={hit:false,tC:0,xP:0,yP:0,xT:0,yT:0,md:0,diag:'',tF:0,ok:true};
+  if(u<=0||!isFinite(u)){R.ok=false;R.diag='Invalid speed';return R;}
+  if(ct<1e-12){R.ok=false;R.diag='Invalid angle';return R;}
+
+  if(sc===1){
+    const tD=D/(u*ct);if(tD<=0){R.ok=false;R.diag='Invalid time';return R;}
+    const yD=u*st*tD-.5*g*tD*tD;
+    Object.assign(R,{tC:tD,xP:D,yP:yD,xT:D,yT:0,md:Math.abs(yD),tF:tD});
+    R.hit=R.md<=tV;
+    R.diag=R.hit?'Scored!':yD>0?'Too high (+'+fn(yD)+' m)':'Too low ('+fn(Math.abs(yD))+' m below)';
+  }else if(sc===2){
+    const tD=D/(u*ct);if(tD<=0){R.ok=false;R.diag='Invalid time';return R;}
+    const yD=u*st*tD-.5*g*tD*tD;
+    Object.assign(R,{tC:tD,xP:D,yP:yD,xT:D,yT:h,md:Math.abs(yD-h),tF:tD});
+    R.hit=R.md<=tV;
+    R.diag=R.hit?'Scored!':yD>h?'Too high (+'+fn(yD-h)+' m)':'Too low ('+fn(h-yD)+' m below)';
+  }else if(sc===3){
+    const tf=2*u*st/g;if(tf<=0){R.ok=false;R.diag='Invalid flight time';return R;}
+    const xP=u*ct*tf,xT=D+vt*tf;
+    Object.assign(R,{tC:tf,xP,yP:0,xT,yT:0,md:Math.abs(xP-xT),tF:tf});
+    R.hit=R.md<=tH;
+    R.diag=R.hit?'Scored!':xP>xT?'Too far (overshot by '+fn(xP-xT)+' m)':'Too short (undershot by '+fn(xT-xP)+' m)';
+  }
+  return R;
+}
+
+function answer(s){
+  const{sc,ang,D,h,vt,g}=s;
+  const th=d2r(ang),ct=Math.cos(th),st=Math.sin(th),s2=Math.sin(2*th);
+  if(sc===1){
+    if(s2<=0)return{ok:false,msg:'No solution for this angle'};
+    const u=Math.sqrt(g*D/s2);return{ok:true,u,msg:'u = √(gD/sin2θ) = '+fn(u,4)+' m/s'};
+  }else if(sc===2){
+    const den=2*ct*ct*(D*Math.tan(th)-h);
+    if(den<=0)return{ok:false,msg:'No physical solution (parabola cannot reach target height)'};
+    const u=Math.sqrt(g*D*D/den);return{ok:true,u,msg:'u = √(gD²/[2cos²θ(Dtanθ−h)]) = '+fn(u,4)+' m/s'};
+  }else if(sc===3){
+    const AA=s2,BB=-2*vt*st,CC=-g*D;
+    if(Math.abs(AA)<1e-12)return{ok:false,msg:'sin(2θ)≈0, cannot solve'};
+    const disc=BB*BB-4*AA*CC;
+    if(disc<0)return{ok:false,msg:'Discriminant < 0, no physical solution'};
+    const u1=(-BB+Math.sqrt(disc))/(2*AA),u2=(-BB-Math.sqrt(disc))/(2*AA);
+    const sols=[];if(u1>0)sols.push(u1);if(u2>0)sols.push(u2);
+    if(!sols.length)return{ok:false,msg:'No positive physical solution'};
+    const u=Math.min(...sols);
+    return{ok:true,u,msg:'u = '+fn(u,4)+' m/s'+(sols.length>1?' (other root: '+fn(Math.max(...sols),4)+')':'')};
+  }
+  return{ok:false,msg:'Unknown scenario'};
+}
+
+// ==================== CANVAS ====================
+const cv=$('simCanvas'),cx=cv.getContext('2d');
+let cW,cH;
+
+function resizeCV(){
+  const r=cv.parentElement.getBoundingClientRect();
+  cW=Math.floor(r.width);cH=Math.floor(Math.min(cW*.55,520));
+  cv.width=cW;cv.height=cH;drawSc();
+}
+
+function getVP(u){
+  const s=A.set,th=d2r(s.ang),st=Math.sin(th),ct=Math.cos(th);
+  const tUp=u>0?u*st/s.g:1;
+  const yMax=u>0?(u*st)**2/(2*s.g):5;
+  const xGnd=u>0?u*ct*2*tUp:s.D*1.5;
+  let xMn=-2,xMx=Math.max(s.D,xGnd)+3;
+  let yMn=-2,yMx=Math.max(yMax,s.sc===2?s.h:0)+3;
+  if(s.sc===2)yMn=Math.min(yMn,s.h-2);
+  if(s.sc===3){const tf=u>0?2*u*st/s.g:3;const xT=s.D+s.vt*tf;xMx=Math.max(xMx,xT+3,s.D+3);xMn=Math.min(xMn,Math.min(0,s.D+s.vt*tf)-2);}
+  return{xMn,xMx,yMn,yMx};
+}
+
+function p2c(px,py,vp){
+  const m={l:60,r:30,t:30,b:50};
+  const dW=cW-m.l-m.r,dH=cH-m.t-m.b;
+  const sx=dW/(vp.xMx-vp.xMn),sy=dH/(vp.yMx-vp.yMn);
+  const sc=Math.min(sx,sy);
+  return{x:m.l+(px-vp.xMn)*sc,y:cH-m.b-(py-vp.yMn)*sc,s:sc};
+}
+
+function drawBall(x,y,r,rot){
+  cx.save();cx.translate(x,y);cx.rotate(rot);
+  cx.beginPath();cx.arc(0,0,r,0,Math.PI*2);
+  const gr=cx.createRadialGradient(-r*.3,-r*.3,r*.1,0,0,r);
+  gr.addColorStop(0,'#ffb347');gr.addColorStop(1,'#e17055');
+  cx.fillStyle=gr;cx.fill();cx.strokeStyle='#2d3436';cx.lineWidth=Math.max(1,r/8);cx.stroke();
+  // seams
+  cx.lineWidth=Math.max(.6,r/12);cx.strokeStyle='#2d3436';
+  cx.beginPath();cx.moveTo(0,-r);cx.lineTo(0,r);cx.stroke();
+  cx.beginPath();cx.moveTo(-r,0);cx.lineTo(r,0);cx.stroke();
+  cx.beginPath();cx.arc(-r*.2,0,r*.6,-Math.PI/2,Math.PI/2);cx.stroke();
+  cx.beginPath();cx.arc(r*.2,0,r*.6,Math.PI/2,Math.PI*1.5);cx.stroke();
+  cx.restore();
+}
+
+function drawHoop(hx,hy,sc,moving,label){
+  const s=Math.max(sc*.025,2);
+  // backboard
+  cx.fillStyle='#dfe6e9';cx.strokeStyle='#636e72';cx.lineWidth=2;
+  cx.fillRect(hx+12*s,hy-22*s,4*s,44*s);cx.strokeRect(hx+12*s,hy-22*s,4*s,44*s);
+  // rim
+  cx.strokeStyle=moving?'#ff6348':'#d63031';cx.lineWidth=3;
+  cx.beginPath();cx.moveTo(hx-12*s,hy);cx.lineTo(hx+12*s,hy);cx.stroke();
+  cx.fillStyle=cx.strokeStyle;
+  cx.beginPath();cx.arc(hx-12*s,hy,2.5*s,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.arc(hx+12*s,hy,2.5*s,0,Math.PI*2);cx.fill();
+  // net
+  cx.strokeStyle='rgba(255,255,255,.3)';cx.lineWidth=1;
+  for(let i=0;i<5;i++){const nx=hx-12*s+i*6*s;cx.beginPath();cx.moveTo(nx,hy);cx.lineTo(nx+(i%2?2:-2)*s,hy+16*s);cx.stroke();}
+  // pole
+  cx.strokeStyle='#636e72';cx.lineWidth=2;cx.beginPath();cx.moveTo(hx+14*s,hy+22*s);cx.lineTo(hx+14*s,hy+38*s);cx.stroke();
+  // label
+  if(label){cx.fillStyle='rgba(255,255,255,.6)';cx.font='11px sans-serif';cx.textAlign='center';cx.fillText(label,hx,hy-30*s);}
+  // moving indicator
+  if(moving){
+    cx.fillStyle='#ff6348';cx.font='bold 12px sans-serif';cx.textAlign='center';
+    const dir=A.set.vt>0?'→':'←';
+    cx.fillText(dir+' '+fn(Math.abs(A.set.vt),1)+' m/s',hx,hy+50*s);
+  }
+}
+
+function drawLaunch(lx,ly,ang,sc){
+  const s=Math.max(sc*.02,2);const th=d2r(ang);
+  cx.fillStyle='#636e72';cx.fillRect(lx-8*s,ly,16*s,5*s);
+  cx.save();cx.translate(lx,ly);cx.rotate(-th);
+  cx.fillStyle='#2d3436';cx.fillRect(0,-3*s,20*s,6*s);
+  cx.fillStyle='#e17055';cx.beginPath();cx.arc(20*s,0,3.5*s,0,Math.PI*2);cx.fill();
+  cx.restore();
+  cx.fillStyle='#2d3436';cx.beginPath();cx.arc(lx,ly,5*s,0,Math.PI);cx.fill();
+  // angle label
+  cx.fillStyle='rgba(255,255,255,.5)';cx.font='11px sans-serif';cx.textAlign='left';
+  cx.fillText('θ='+ang+'°',lx+22*s,ly-8*s);
+}
+
+function drawSc(u,t,vp){
+  const s=A.set;u=u||0;t=t||0;
+  if(!vp)vp=getVP(u);
+  const m={l:60,r:30,t:30,b:50};
+
+  // bg
+  const bg=cx.createLinearGradient(0,0,0,cH);
+  bg.addColorStop(0,'#0a0e27');bg.addColorStop(.6,'#141852');bg.addColorStop(1,'#1a1a3e');
+  cx.fillStyle=bg;cx.fillRect(0,0,cW,cH);
+
+  // ground
+  const gndP=p2c(vp.xMn,vp.yMn,vp);
+  cx.fillStyle='#1a6b37';cx.fillRect(0,gndP.y,cW,cH-gndP.y+5);
+  // court line
+  const courtY=p2c(0,0,vp).y;
+  cx.strokeStyle='rgba(255,255,255,.1)';cx.lineWidth=1;cx.setLineDash([8,6]);
+  cx.beginPath();cx.moveTo(m.l,courtY);cx.lineTo(cW-m.r,courtY);cx.stroke();cx.setLineDash([]);
+
+  // grid
+  if(A.an.grid){
+    cx.strokeStyle='rgba(255,255,255,.07)';cx.lineWidth=1;
+    const gs=Math.max(1,Math.floor((vp.xMx-vp.xMn)/16));
+    for(let x=Math.ceil(vp.xMn/gs)*gs;x<=vp.xMx;x+=gs){const p=p2c(x,0,vp);cx.beginPath();cx.moveTo(p.x,m.t);cx.lineTo(p.x,cH-m.b);cx.stroke();}
+    const gsy=Math.max(1,Math.floor((vp.yMx-vp.yMn)/10));
+    for(let y=Math.ceil(vp.yMn/gsy)*gsy;y<=vp.yMx;y+=gsy){const p=p2c(0,y,vp);cx.beginPath();cx.moveTo(m.l,p.y);cx.lineTo(cW-m.r,p.y);cx.stroke();}
+  }
+
+  // axis labels
+  cx.fillStyle='rgba(255,255,255,.45)';cx.font='10px sans-serif';
+  const axs=Math.max(1,Math.ceil((vp.xMx-vp.xMn)/14));
+  cx.textAlign='center';
+  for(let x=0;x<=vp.xMx;x+=axs){const p=p2c(x,vp.yMn,vp);if(p.x>m.l&&p.x<cW-m.r)cx.fillText(x+'m',p.x,cH-m.b+16);}
+  const ays=Math.max(1,Math.ceil((vp.yMx-vp.yMn)/8));
+  cx.textAlign='right';
+  for(let y=Math.ceil(vp.yMn);y<=vp.yMx;y+=ays){const p=p2c(vp.xMn,y,vp);if(p.y>m.t+10&&p.y<cH-m.b-5)cx.fillText(y+'m',m.l-6,p.y+4);}
+
+  // launcher
+  const lp=p2c(0,0,vp);
+  drawLaunch(lp.x,lp.y,s.ang,lp.s);
+
+  // hoop position based on scenario
+  let hoopX,hoopY;
+  if(s.sc===1){hoopX=s.D;hoopY=0;}
+  else if(s.sc===2){hoopX=s.D;hoopY=s.h;}
+  else{hoopX=s.D+s.vt*t;hoopY=0;}
+
+  const hp=p2c(hoopX,hoopY,vp);
+  const isMoving=s.sc===3;
+  const hoopLabel='Hoop ('+fn(hoopX,1)+', '+fn(hoopY,1)+')';
+  drawHoop(hp.x,hp.y,lp.s,isMoving,hoopLabel);
+
+  // Scenario 3: show initial hoop position ghost
+  if(s.sc===3&&t>0){
+    const ip=p2c(s.D,0,vp);
+    cx.globalAlpha=.25;drawHoop(ip.x,ip.y,lp.s,false,'Start');cx.globalAlpha=1;
+  }
+
+  // trail
+  if(A.an.showT&&A.an.trail.length>1){
+    cx.beginPath();cx.strokeStyle='rgba(255,165,0,.45)';cx.lineWidth=2;cx.setLineDash([5,4]);
+    A.an.trail.forEach((pt,i)=>{const p=p2c(pt.x,pt.y,vp);i===0?cx.moveTo(p.x,p.y):cx.lineTo(p.x,p.y);});
+    cx.stroke();cx.setLineDash([]);
+  }
+
+  // ball
+  if(u>0&&t>0){
+    const th=d2r(s.ang);
+    const bx=u*Math.cos(th)*t,by=u*Math.sin(th)*t-.5*s.g*t*t;
+    const bp=p2c(bx,by,vp);
+    const br=Math.max(7,lp.s*.28);
+    if(bp.x>=0&&bp.x<=cW&&bp.y>=0&&bp.y<=cH){
+      drawBall(bp.x,bp.y,br,t*6);
+    }else{
+      cx.fillStyle='#ff6b6b';cx.font='bold 14px sans-serif';cx.textAlign='center';
+      cx.fillText('⚠ Ball out of view',cW/2,25);
+    }
+  }
+
+  // info bar
+  if(u>0&&t>0){
+    cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(m.l,4,cW-m.l-m.r,22);
+    const th=d2r(s.ang);
+    const bx=u*Math.cos(th)*t,by=u*Math.sin(th)*t-.5*s.g*t*t;
+    cx.fillStyle='#fff';cx.font='bold 12px monospace';cx.textAlign='left';
+    cx.fillText('t='+fn(t,3)+'s   x='+fn(bx,2)+'m   y='+fn(by,2)+'m   u='+fn(u,2)+'m/s',m.l+8,18);
+  }
+
+  // scenario tag
+  const scNames={1:'Scenario 1: Same-Level Fixed Hoop',2:'Scenario 2: Different-Height Fixed Hoop',3:'Scenario 3: Same-Level Moving Hoop'};
+  const scColors={1:'#3b82f6',2:'#8b5cf6',3:'#ef4444'};
+  cx.fillStyle=scColors[s.sc];
+  const tw=cx.measureText(scNames[s.sc]).width;
+  cx.beginPath();
+  const tagX=cW-m.r-tw-20,tagY=cH-14;
+  cx.roundRect(tagX,tagY-12,tw+16,18,4);cx.fill();
+  cx.fillStyle='#fff';cx.font='bold 10px sans-serif';cx.textAlign='left';
+  cx.fillText(scNames[s.sc],tagX+8,tagY+1);
+
+  // Scenario params
+  cx.fillStyle='rgba(255,255,255,.35)';cx.font='10px sans-serif';cx.textAlign='left';
+  let pStr='θ='+s.ang+'° D='+s.D+'m g='+s.g;
+  if(s.sc===2)pStr+=' h='+s.h+'m';
+  if(s.sc===3)pStr+=' vT='+s.vt+'m/s';
+  cx.fillText(pStr,m.l+5,cH-8);
+}
+
+// ==================== ANIMATION ====================
+function startAnim(u,res){
+  cancelAnimationFrame(A.an.raf);
+  A.an.on=true;A.an.pau=false;A.an.t=0;A.an.trail=[];
+  const th=d2r(A.set.ang),st=Math.sin(th);
+  const tUp=u*st/A.set.g;
+  let tEnd=tUp*2*1.4;
+  if(A.set.sc===2){
+    const disc=u*u*st*st+2*A.set.g*Math.max(0,-A.set.h);
+    if(disc>0)tEnd=Math.max(tEnd,(u*st+Math.sqrt(disc))/A.set.g*1.1);
+  }
+  tEnd=Math.max(tEnd,res.tC*1.3,1);
+  A.an.te=Math.min(tEnd,30);
+  A.an.last={u,res};
+  const vp=getVP(u);
+  let prev=performance.now();
+  $('btnPlay').disabled=false;$('btnReplay').disabled=false;
+  $('btnPlay').textContent='⏸ Pause';
+
+  function frame(now){
+    if(!A.an.on)return;
+    if(A.an.pau){A.an.raf=requestAnimationFrame(frame);return;}
+    const dt=(now-prev)/1000*(A.an.slow?.3:1.5);prev=now;
+    A.an.t=Math.min(A.an.t+dt,A.an.te);
+    const t=A.an.t,th2=d2r(A.set.ang);
+    const bx=u*Math.cos(th2)*t,by=u*Math.sin(th2)*t-.5*A.set.g*t*t;
+    if(A.an.trail.length<600)A.an.trail.push({x:bx,y:by});
+
+    cx.clearRect(0,0,cW,cH);
+    drawSc(u,t,vp);
+
+    if(A.an.t>=res.tC-.01){
+      cx.fillStyle=res.hit?'rgba(39,174,96,.2)':'rgba(214,48,49,.2)';
+      cx.fillRect(0,0,cW,cH);
+      cx.fillStyle=res.hit?'#2ecc71':'#e74c3c';cx.font='bold 26px sans-serif';cx.textAlign='center';
+      cx.fillText(res.hit?'✅ SCORED!':'❌ '+res.diag,cW/2,cH/2-50);
+    }
+
+    $('animInfo').textContent='t='+fn(A.an.t,3)+'s / '+fn(A.an.te,1)+'s';
+    if(A.an.t<A.an.te)A.an.raf=requestAnimationFrame(frame);
+    else{A.an.on=false;$('btnPlay').textContent='▶ Play';$('btnPlay').disabled=true;}
+  }
+  A.an.raf=requestAnimationFrame(frame);
+}
+
+// ==================== TIMER ====================
+function startTmr(){
+  A.rnd.id=Date.now();A.rnd.start=Date.now();A.rnd.end=A.rnd.start+A.set.tl*60000;A.rnd.st='active';A.rnd.pauseAt=null;
+  A.so=[];A.gd.forEach(g=>{g.rank=null;g.sp=0;g.su=0;g.late=false;});
+  dbC('successes');saveRnd();updTmr();
+  clearInterval(A.tmr);A.tmr=setInterval(updTmr,500);
+  $('btnPause').disabled=false;$('btnPause').textContent='⏸ Pause';$('btnStart').disabled=true;
+}
+function stopTmr(){
+  clearInterval(A.tmr);A.rnd.st='idle';
+  $('headerTimer').textContent='⏱ Not Started';$('headerTimer').classList.remove('timer-active');
+  $('dTimerSt').textContent='Not Started';$('dTimerSt').style.background='var(--mut)';
+  $('dTimerTm').textContent='--:--';$('timerBar').style.width='0';
+  $('btnPause').disabled=true;$('btnStart').disabled=false;
+}
+function toggleTmr(){
+  if(A.rnd.st==='active'){A.rnd.pauseAt=Date.now();A.rnd.st='paused';$('btnPause').textContent='▶ Resume';}
+  else if(A.rnd.st==='paused'){A.rnd.end+=Date.now()-A.rnd.pauseAt;A.rnd.pauseAt=null;A.rnd.st='active';$('btnPause').textContent='⏸ Pause';}
+}
+function updTmr(){
+  if(A.rnd.st==='idle')return;
+  const now=Date.now();
+  let rem=A.rnd.st==='paused'?A.rnd.end-A.rnd.pauseAt:A.rnd.end-now;
+  if(rem<=0&&A.rnd.st==='active'){A.rnd.st='ended';$('btnPause').disabled=true;rem=0;}
+  const tot=A.set.tl*60000;
+  const pct=Math.max(0,Math.min(100,(1-rem/tot)*100));
+  const ms=Math.floor(rem/60000),ss=Math.floor((rem%60000)/1000);
+  const tStr=String(ms).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+  $('headerTimer').textContent='⏱ '+tStr;$('headerTimer').classList.toggle('timer-active',A.rnd.st==='active');
+  $('dTimerTm').textContent=tStr;$('timerBar').style.width=pct+'%';
+  $('timerBar').style.background=rem<60000?'var(--dan)':rem<180000?'var(--gold)':'var(--pri)';
+  const sm={active:'In Progress',paused:'Paused',ended:'Ended'};
+  $('dTimerSt').textContent=sm[A.rnd.st]||'';
+  $('dTimerSt').style.background=A.rnd.st==='active'?'var(--pri)':A.rnd.st==='paused'?'var(--gold)':'var(--dan)';
+}
+function withinTL(){return A.rnd.st==='active'&&Date.now()<A.rnd.end;}
+function challOn(){return A.rnd.st==='active'||A.rnd.st==='paused'||A.rnd.st==='ended';}
+
+// ==================== SHOOT ====================
+async function shoot(){
+  const gid=A.grp,u=parseFloat($('inpU').value);
+  if(isNaN(u)||u<=0)return modal('<h2>⚠️ Invalid Input</h2><p>Please enter a positive speed value.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+  if(A.set.ang<=0||A.set.ang>=90)return modal('<h2>⚠️ Invalid Angle</h2><p>Angle must be between 0° and 90° exclusive.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+  if(A.set.ma>0&&A.gd[gid-1].att>=A.set.ma)return modal('<h2>⚠️ Max Attempts Reached</h2><p>Group '+gid+' has reached the '+A.set.ma+' attempt limit.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+  if(A.tMode&&A.reflNeed[gid])return modal('<h2>⚠️ Reflection Required</h2><p>Please complete the reflection before your next shot.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+
+  const res=compute(u,A.set);
+  if(!res.ok)return modal('<h2>⚠️ Invalid Shot</h2><p>'+res.diag+'</p><button class="btn-pri" onclick="closeM()">OK</button>');
+
+  const wt=withinTL(),ta=challOn();
+  let rank=null,spins=0,late=false;
+
+  if(res.hit&&A.gd[gid-1].rank===null){
+    if(wt){A.so.push(gid);rank=A.so.length;spins=rank<=SPINS.length?SPINS[rank-1]:1;}
+    else if(ta){late=true;}
+    else{A.so.push(gid);rank=A.so.length;}
+    A.gd[gid-1].rank=rank;A.gd[gid-1].sp=spins;A.gd[gid-1].late=late;
+    await saveSuc({groupId:gid,rank,spinsAwarded:spins,spinsUsed:0,successTimestamp:Date.now(),scenario:A.set.sc,roundId:A.rnd.id,isLate:late});
+  }
+
+  A.gd[gid-1].att++;A.gd[gid-1].lsu=u;A.gd[gid-1].lr=res.hit?'hit':'miss';
+
+  await saveAtt({groupId:gid,scenario:A.set.sc,speed:u,settings:{...A.set},note:$('inpNote').value,timestamp:Date.now(),timerActive:ta,withinTime:wt,hit:res.hit,successRank:res.hit?rank:null,spinsAwarded:res.hit?spins:0,tFlight:res.tF,xProj:res.xP,yProj:res.yP,xTarget:res.xT,yTarget:res.yT,missDist:res.md,diagnostic:res.diag,reflection:null});
+
+  startAnim(u,res);showDiag(res);
+
+  if(A.tMode&&!res.hit){A.reflNeed[gid]=true;$('reflBox').style.display='block';updTF(3);}
+  else{$('reflBox').style.display='none';if(A.tMode)updTF(3);}
+
+  if(res.hit&&(rank!==null||late)){
+    const delay=Math.min(res.tC*500,2500);
+    setTimeout(()=>{
+      if(late)sucModal(gid,null,0,true);
+      else if(rank!==null)sucModal(gid,rank,spins,false);
+    },delay);
+  }
+  refreshDash();updGrpBtns();updGrpSt();
+}
+
+function showDiag(r){
+  const p=$('diagPanel');p.style.display='block';
+  p.innerHTML='<strong>Shot Diagnostics:</strong><br>'+
+    'Flight time t = '+fn(r.tF,4)+' s<br>'+
+    'Projectile position: ('+fn(r.xP)+', '+fn(r.yP)+') m<br>'+
+    'Target position: ('+fn(r.xT)+', '+fn(r.yT)+') m<br>'+
+    'Miss distance = '+fn(r.md,3)+' m<br>'+
+    '<strong style="color:'+(r.hit?'var(--suc)':'var(--dan)')+'">'+r.diag+'</strong>';
+}
+
+// ==================== CONFETTI ====================
+const ccv=$('confetti-canvas'),ccx=ccv.getContext('2d');
+let cParts=[],cOn=false;
+function startConf(){
+  ccv.width=innerWidth;ccv.height=innerHeight;cParts=[];cOn=true;
+  for(let i=0;i<200;i++)cParts.push({x:Math.random()*ccv.width,y:Math.random()*ccv.height-ccv.height,vx:(Math.random()-.5)*7,vy:Math.random()*5+2,c:'hsl('+Math.floor(Math.random()*360)+',80%,60%)',sz:Math.random()*8+3,r:Math.random()*6.28,rv:(Math.random()-.5)*.3});
+  animConf();setTimeout(()=>{cOn=false;ccx.clearRect(0,0,ccv.width,ccv.height);},4500);
+}
+function animConf(){
+  if(!cOn)return;
+  ccx.clearRect(0,0,ccv.width,ccv.height);
+  cParts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.r+=p.rv;ccx.save();ccx.translate(p.x,p.y);ccx.rotate(p.r);ccx.fillStyle=p.c;ccx.fillRect(-p.sz/2,-p.sz/2,p.sz,p.sz*.6);ccx.restore();});
+  requestAnimationFrame(animConf);
+}
+
+function sucModal(gid,rank,spins,late){
+  startConf();
+  let h='<h2 style="color:var(--suc)">🎉 Group '+gid+' Scored!</h2>';
+  if(late)h+='<p class="spins" style="color:var(--dan)">Scored after time expired — no wheel spins for this round.</p>';
+  else if(rank!==null){h+='<div class="rank" style="color:var(--gold)">#'+rank+'</div><p class="spins">🎰 Awarded '+spins+' reward wheel spin'+(spins>1?'s':'')+'!</p>';}
+  h+='<button class="btn-pri" style="margin-top:16px;padding:12px 30px" onclick="closeM()">Back to Challenge</button>';
+  modal(h);
+}
+
+// ==================== MODAL ====================
+function modal(h){$('modalBox').innerHTML=h;$('modal-overlay').classList.add('show');}
+function closeM(){$('modal-overlay').classList.remove('show');}
+
+// ==================== WHEEL ====================
+const wc=$('wheelCanvas'),wx=wc.getContext('2d');
+let wRot=0,wSpin=false;
+
+function drawW(){
+  const r=180,n=A.prz.length,arc=Math.PI*2/n;
+  wx.clearRect(0,0,400,400);
+  wx.save();wx.shadowColor='rgba(0,0,0,.25)';wx.shadowBlur=15;
+  wx.beginPath();wx.arc(200,200,r+4,0,Math.PI*2);wx.fillStyle='#fff';wx.fill();wx.restore();
+  for(let i=0;i<n;i++){
+    const a=i*arc+wRot;
+    wx.beginPath();wx.moveTo(200,200);wx.arc(200,200,r,a,a+arc);wx.closePath();
+    wx.fillStyle=WCOLORS[i%WCOLORS.length];wx.fill();wx.strokeStyle='#fff';wx.lineWidth=2;wx.stroke();
+    wx.save();wx.translate(200,200);wx.rotate(a+arc/2);
+    wx.fillStyle='#fff';wx.font='bold 12px sans-serif';wx.textAlign='right';
+    wx.fillText(A.prz[i],r-12,4);wx.restore();
+  }
+  wx.beginPath();wx.arc(200,200,16,0,Math.PI*2);wx.fillStyle='#fff';wx.fill();wx.strokeStyle='#ddd';wx.lineWidth=2;wx.stroke();
+}
+
+async function spinW(){
+  const gid=parseInt($('wGrp').value);if(!gid)return;
+  const g=A.gd[gid-1],rem=g.sp-g.su;
+  if(rem<=0)return modal('<h2>⚠️</h2><p>Group '+gid+' has no remaining spins.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+  if(wSpin)return;wSpin=true;$('btnSpin').disabled=true;
+  const totR=Math.random()*Math.PI*2+Math.PI*10,dur=3800,st=performance.now(),sr=wRot;
+  function f(now){
+    const el=now-st,pr=Math.min(el/dur,1),ea=1-Math.pow(1-pr,3);
+    wRot=sr+totR*ea;drawW();
+    if(pr<1)requestAnimationFrame(f);
+    else{
+      wSpin=false;$('btnSpin').disabled=false;
+      const n=A.prz.length,arc=Math.PI*2/n;
+      const pa=(Math.PI*1.5-wRot%(Math.PI*2)+Math.PI*4)%(Math.PI*2);
+      const idx=Math.floor(pa/arc)%n;
+      const prize=A.prz[idx];
+      $('wResult').textContent='🎉 '+prize;$('wResult').style.color='var(--gold)';
+      g.su++;updSU(gid,g.su);saveWR({groupId:gid,prize,timestamp:Date.now()});
+      if(prize==='Spin Again'){g.sp++;saveSuc({groupId:gid,spinsAwarded:g.sp,spinsUsed:g.su,rank:g.rank,successTimestamp:Date.now(),scenario:A.set.sc,roundId:A.rnd.id,isLate:g.late});}
+      updWI();refreshDash();loadWL();
+    }
+  }
+  requestAnimationFrame(f);
+}
+
+function updWI(){
+  const gid=parseInt($('wGrp').value);
+  if(!gid){$('wSpinInfo').textContent='Select a group';$('btnSpin').disabled=true;return;}
+  const g=A.gd[gid-1],rem=Math.max(0,g.sp-g.su);
+  $('wSpinInfo').innerHTML='Group '+gid+': Awarded '+g.sp+', Used '+g.su+', <strong style="color:var(--gold)">Remaining '+rem+'</strong>';
+  $('btnSpin').disabled=rem<=0||wSpin;
+}
+
+async function loadWL(){
+  const rs=await dbGA('wheelResults');
+  const b=$('wLogBody');b.innerHTML='';
+  rs.sort((a,b)=>b.timestamp-a.timestamp).forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>Group '+r.groupId+'</td><td>'+r.prize+'</td><td>'+ts(r.timestamp)+'</td>';
+    b.appendChild(tr);
+  });
+}
+
+// ==================== DASHBOARD ====================
+async function refreshDash(){
+  const atts=await dbGA('attempts');
+  const sucs=await dbGA('successes');
+  const wrs=await dbGA('wheelResults');
+
+  const ga=Array.from({length:NUM_G},()=>[]);
+  atts.forEach(a=>{if(a.groupId>=1&&a.groupId<=NUM_G)ga[a.groupId-1].push(a);});
+
+  sucs.forEach(s=>{if(s.groupId>=1&&s.groupId<=NUM_G){
+    const g=A.gd[s.groupId-1];g.rank=s.rank;g.sp=s.spinsAwarded||0;g.su=s.spinsUsed||0;g.late=s.isLate||false;
+  }});
+
+  const lb=$('lbBody');lb.innerHTML='';
+  let totA=0,sucC=0;
+
+  for(let i=0;i<NUM_G;i++){
+    const gid=i+1,gi=ga[i],g=A.gd[i];
+    g.att=gi.length;totA+=gi.length;
+    const last=gi.length?gi[gi.length-1]:null;
+    g.lsu=last?last.speed:null;g.lr=last?(last.hit?'hit':'miss'):null;
+    let st='—',sc='';
+    if(g.rank!==null&&!g.late){st='✅ Scored';sc='hit-r';sucC++;}
+    else if(g.late){st='⏰ Late';sc='late-r';}
+    const rem=Math.max(0,g.sp-g.su);
+    const tr=document.createElement('tr');tr.className=sc;
+    tr.innerHTML='<td><strong>Grp '+gid+'</strong></td><td>'+st+'</td><td>'+(g.rank!==null?'#'+g.rank:'—')+'</td><td>'+g.sp+'</td><td>'+g.su+'</td><td style="color:var(--gold);font-weight:700">'+rem+'</td><td>'+g.att+'</td><td>'+(g.lsu!==null?fn(g.lsu,2):'—')+'</td><td>'+(g.lr==='hit'?'<span class="badge b-hit">Hit</span>':g.lr==='miss'?'<span class="badge b-miss">Miss</span>':'—')+'</td>';
+    lb.appendChild(tr);
+  }
+
+  $('stSuc').textContent=sucC;$('stAtt').textContent=totA;
+  const fs=sucs.filter(s=>s.rank===1);$('stFast').textContent=fs.length?'Grp '+fs[0].groupId:'—';
+  const sorted=[...atts].sort((a,b)=>b.timestamp-a.timestamp);
+  $('stLast').textContent=sorted.length?'Grp '+sorted[0].groupId:'—';
+
+  // log
+  const fg=parseInt($('fltGrp').value)||0,fr=$('fltRes').value,fsc=parseInt($('fltSc').value)||0;
+  let flt=sorted;
+  if(fg)flt=flt.filter(a=>a.groupId===fg);
+  if(fr!=='')flt=flt.filter(a=>a.hit===(fr==='1'));
+  if(fsc)flt=flt.filter(a=>a.scenario===fsc);
+
+  const logB=$('logBody');logB.innerHTML='';
+  flt.slice(0,120).forEach(a=>{
+    const tr=document.createElement('tr');tr.className=a.hit?'hit-r':'miss-r';
+    const scTag='<span class="sc-tag sc'+a.scenario+'">S'+a.scenario+'</span>';
+    tr.innerHTML='<td>'+(a.id||'')+'</td><td>Grp '+a.groupId+'</td><td>'+scTag+'</td><td>'+fn(a.speed,2)+'</td><td>'+(a.hit?'<span class="badge b-hit">Hit</span>':'<span class="badge b-miss">Miss</span>')+'</td><td>'+fn(a.tFlight,3)+'</td><td>'+fn(a.missDist,3)+'</td><td style="font-size:.8em">'+a.diagnostic+'</td><td>'+ts(a.timestamp)+'</td>';
+    logB.appendChild(tr);
+  });
+
+  // misconceptions
+  if(A.tMode){
+    $('miscCard').style.display='block';
+    const rc={vert_disp:0,time_sub:0,sign:0,unit:0,calc:0};
+    atts.filter(a=>a.reflection).forEach(a=>{if(rc[a.reflection]!==undefined)rc[a.reflection]++;});
+    const lbl={vert_disp:'Vertical displacement',time_sub:'Time substitution',sign:'Sign convention',unit:'Unit error',calc:'Calculation'};
+    $('miscStats').innerHTML=Object.entries(rc).map(([k,v])=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+lbl[k]+'</span><strong>'+v+'</strong></div>').join('');
+  }else $('miscCard').style.display='none';
+
+  updGrpBtns();
+}
+
+async function refreshAll(){applySt();refreshDash();loadWL();updWI();drawSc();drawW();}
+
+// ==================== UI INIT ====================
+function initTabs(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');$(b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='tab-sim'){resizeCV();drawSc();}
+    if(b.dataset.tab==='tab-wheel'){drawW();updWI();loadWL();}
+    if(b.dataset.tab==='tab-dash')refreshDash();
+  }));
+}
+
+function initGrps(){
+  const s=$('grpSel');s.innerHTML='';
+  for(let i=1;i<=NUM_G;i++){const b=document.createElement('button');b.textContent='Group '+i;b.dataset.g=i;b.addEventListener('click',()=>selGrp(i));s.appendChild(b);}
+  const ws=$('wGrp');ws.innerHTML='<option value="">-- Select --</option>';
+  for(let i=1;i<=NUM_G;i++)ws.innerHTML+='<option value="'+i+'">Group '+i+'</option>';
+  const fg=$('fltGrp');for(let i=1;i<=NUM_G;i++)fg.innerHTML+='<option value="'+i+'">Group '+i+'</option>';
+}
+
+function selGrp(g){
+  A.grp=g;
+  document.querySelectorAll('#grpSel button').forEach(b=>{b.classList.remove('sel');if(parseInt(b.dataset.g)===g)b.classList.add('sel');});
+  updGrpSt();
+  if(A.tMode)updTF(1);
+  $('reflBox').style.display=(A.tMode&&A.reflNeed[g])?'block':'none';
+}
+
+function updGrpBtns(){
+  document.querySelectorAll('#grpSel button').forEach(b=>{
+    const g=parseInt(b.dataset.g),d=A.gd[g-1];
+    b.classList.remove('won');if(d.rank!==null&&!d.late)b.classList.add('won');
+  });
+}
+
+function updGrpSt(){
+  const g=A.gd[A.grp-1];
+  let s='Group '+A.grp+': '+g.att+' attempt'+(g.att!==1?'s':'');
+  if(g.rank!==null)s+=g.late?' | ⏰ Scored (late)':' | ✅ Scored #'+g.rank;
+  if(A.set.ma>0)s+=' | Max: '+A.set.ma;
+  $('grpStatus').textContent=s;
+}
+
+function applySt(){
+  A.set.sc=parseInt($('setSc').value);
+  A.set.ang=parseFloat($('setAng').value)||45;
+  A.set.D=parseFloat($('setD').value)||10;
+  A.set.h=parseFloat($('setH').value)||0;
+  A.set.vt=parseFloat($('setVt').value)||0;
+  A.set.g=parseFloat($('setG').value)||9.81;
+  A.set.tV=parseFloat($('setTV').value)||.25;
+  A.set.tH=parseFloat($('setTH').value)||.25;
+  A.set.tl=parseInt($('setTL').value)||10;
+  A.set.ma=parseInt($('setMA').value)||0;
+
+  $('rowH').style.display=A.set.sc===2?'flex':'none';
+  $('rowVt').style.display=A.set.sc===3?'flex':'none';
+
+  const nm={1:'Scenario 1: Same-Level Fixed',2:'Scenario 2: Different Height',3:'Scenario 3: Moving Hoop'};
+  $('headerScenario').textContent=nm[A.set.sc];
+
+  saveSt();resizeCV();drawSc();updAns();
+}
+
+function updAns(){
+  if(!A.tUnlk){$('ansContent').style.display='none';return;}
+  $('ansContent').style.display='block';
+  const a=answer(A.set);
+  $('ansContent').innerHTML=a.ok?'<strong>Required speed:</strong><br>'+a.msg:'<strong>⚠️ '+a.msg+'</strong>';
+}
+
+function updTF(s){['tf1','tf2','tf3'].forEach((id,i)=>$(id).classList.toggle('on',i<s));}
+
+function initPrzEd(){
+  const e=$('prizeEd');e.innerHTML='';
+  A.prz.forEach((p,i)=>{const d=document.createElement('div');d.className='form-row';d.innerHTML='<label>Prize '+(i+1)+'</label><input type="text" class="prz-in" value="'+p+'">';e.appendChild(d);});
+}
+
+function initEvents(){
+  // settings
+  $('setSc').addEventListener('change',applySt);
+  ['setAng','setD','setH','setVt','setG','setTV','setTH','setTL','setMA'].forEach(id=>$(id).addEventListener('change',applySt));
+  $('btnApply').addEventListener('click',()=>{applySt();modal('<h2>✅ Settings Applied</h2><button class="btn-pri" onclick="closeM()">OK</button>');});
+  $('btnStart').addEventListener('click',()=>{startTmr();refreshDash();});
+  $('btnPause').addEventListener('click',toggleTmr);
+  $('btnReset').addEventListener('click',()=>modal('<h2>⚠️ Reset This Round?</h2><p>Current round successes and spins will be cleared. Attempt history is kept.</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn-dan" onclick="resetRnd().then(()=>{closeM();refreshAll()})">Confirm Reset</button><button class="btn-out" onclick="closeM()">Cancel</button></div>'));
+  $('btnClrAll').addEventListener('click',()=>modal('<h2>🗑 Clear ALL Records?</h2><p>This cannot be undone! All attempts, successes, and wheel results will be permanently deleted.</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn-dan" onclick="clearAll().then(()=>{closeM();refreshAll()})">Confirm Clear</button><button class="btn-out" onclick="closeM()">Cancel</button></div>'));
+  $('btnExp').addEventListener('click',exportData);
+  $('fileImp').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>importData(ev.target.result);r.readAsText(f);e.target.value='';});
+  $('btnSavePrz').addEventListener('click',()=>{A.prz=[...document.querySelectorAll('.prz-in')].map(i=>i.value.trim()).filter(v=>v);if(!A.prz.length)A.prz=[...DEF_PRIZES];savePrz();drawW();initPrzEd();modal('<h2>✅ Prizes Saved</h2><button class="btn-pri" onclick="closeM()">OK</button>');});
+
+  // student input
+  $('chkDone').addEventListener('change',()=>{$('btnShoot').disabled=!$('chkDone').checked;});
+  $('btnShoot').addEventListener('click',shoot);
+  $('btnClear').addEventListener('click',()=>{$('inpU').value='';$('inpNote').value='';$('chkDone').checked=false;$('btnShoot').disabled=true;});
+  $('btnNext').addEventListener('click',()=>{
+    const nx=(A.grp%NUM_G)+1;selGrp(nx);
+    $('inpU').value='';$('inpNote').value='';$('chkDone').checked=false;$('btnShoot').disabled=true;$('inpU').focus();
+  });
+
+  // animation
+  $('btnPlay').addEventListener('click',()=>{if(!A.an.on)return;A.an.pau=!A.an.pau;$('btnPlay').textContent=A.an.pau?'▶ Play':'⏸ Pause';});
+  $('btnReplay').addEventListener('click',()=>{if(A.an.last)startAnim(A.an.last.u,A.an.last.res);});
+  $('btnTrail').addEventListener('click',()=>{A.an.showT=!A.an.showT;$('btnTrail').textContent='Trail: '+(A.an.showT?'ON':'OFF');});
+  $('btnSlow').addEventListener('click',()=>{A.an.slow=!A.an.slow;$('btnSlow').textContent='Slow-Mo: '+(A.an.slow?'ON':'OFF');});
+  $('btnGrid').addEventListener('click',()=>{A.an.grid=!A.an.grid;$('btnGrid').textContent='Grid: '+(A.an.grid?'ON':'OFF');drawSc();});
+
+  // teacher answer
+  $('btnUnlock').addEventListener('click',()=>{
+    if($('inpPass').value===PASSCODE){A.tUnlk=true;updAns();$('inpPass').value='';modal('<h2>🔓 Unlocked</h2><button class="btn-pri" onclick="closeM()">OK</button>');}
+    else modal('<h2>❌ Wrong Passcode</h2><button class="btn-pri" onclick="closeM()">OK</button>');
+  });
+
+  // teaching mode
+  $('chkTeach').addEventListener('change',()=>{A.tMode=$('chkTeach').checked;$('teachFlowBox').style.display=A.tMode?'block':'none';if(A.tMode){$('setSc').value='2';applySt();}refreshDash();});
+
+  // reflection
+  $('btnRefl').addEventListener('click',async()=>{
+    const sel=document.querySelector('input[name=refl]:checked');
+    if(!sel)return modal('<h2>⚠️</h2><p>Please select a reflection option.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+    A.reflNeed[A.grp]=false;$('reflBox').style.display='none';
+    const atts=await dbGA('attempts');
+    const ga=atts.filter(a=>a.groupId===A.grp).sort((a,b)=>b.timestamp-a.timestamp);
+    if(ga.length){ga[0].reflection=sel.value;await dbP('attempts',ga[0]);}
+    document.querySelectorAll('input[name=refl]').forEach(r=>r.checked=false);
+    refreshDash();
+  });
+
+  // wheel
+  $('wGrp').addEventListener('change',updWI);
+  $('btnSpin').addEventListener('click',spinW);
+
+  // filters
+  ['fltGrp','fltRes','fltSc'].forEach(id=>$(id).addEventListener('change',refreshDash));
+
+  // modal close
+  $('modal-overlay').addEventListener('click',e=>{if(e.target===$('modal-overlay'))closeM();});
+
+  window.addEventListener('resize',()=>{resizeCV();drawSc();});
+}
+
+// ==================== MAIN INIT ====================
+async function init(){
+  try{await openDB();await loadSt();await loadPrz();}
+  catch(e){A.mem=true;console.warn('IndexedDB unavailable',e);}
+
+  if(A.mem)modal('<h2>⚠️ IndexedDB Unavailable</h2><p>Using temporary memory storage. Records will be lost when the page is closed.</p><button class="btn-pri" onclick="closeM()">Understood</button>');
+
+  // populate settings form
+  $('setSc').value=A.set.sc;$('setAng').value=A.set.ang;$('setD').value=A.set.D;$('setH').value=A.set.h;$('setVt').value=A.set.vt;$('setG').value=A.set.g;$('setTV').value=A.set.tV;$('setTH').value=A.set.tH;$('setTL').value=A.set.tl;$('setMA').value=A.set.ma;
+
+  initTabs();initGrps();initEvents();initPrzEd();initBC();
+  applySt();selGrp(1);resizeCV();drawSc();drawW();
+
+  // rebuild state from DB
+  const sucs=await dbGA('successes');
+  A.so=[];
+  sucs.sort((a,b)=>(a.rank||999)-(b.rank||999)).forEach(s=>{
+    if(s.groupId>=1&&s.groupId<=NUM_G){
+      const g=A.gd[s.groupId-1];g.rank=s.rank;g.sp=s.spinsAwarded||0;g.su=s.spinsUsed||0;g.late=s.isLate||false;
+      if(s.rank)A.so.push(s.groupId);
+    }
+  });
+
+  refreshDash();loadWL();
+
+  // polling
+  A.poll=setInterval(async()=>{try{await refreshDash();}catch(e){}},1000);
+}
+
+init();
+</script>
+</body>
+</html>
