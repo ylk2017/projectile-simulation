@@ -94,6 +94,8 @@ canvas#wheelCanvas{border-radius:50%;box-shadow:0 4px 20px rgba(0,0,0,.12)}
 .student-private{-webkit-text-security:disc;text-security:disc;letter-spacing:.12em}
 #inpU{font-variant-numeric:tabular-nums}
 .privacy-note{margin:-2px 0 10px;color:var(--mut);font-size:.8em;line-height:1.45}
+.grp-sel button.demo{grid-column:1/-1;background:linear-gradient(135deg,#6d28d9,#a855f7);border-color:#c084fc;color:#fff}
+.grp-sel button.demo.sel{background:linear-gradient(135deg,#7e22ce,#c084fc);border-color:#e9d5ff;color:#fff;box-shadow:0 0 18px rgba(192,132,252,.35)}
 
 </style>
 </head>
@@ -687,14 +689,21 @@ function challOn(){return A.rnd.st==='active'||A.rnd.st==='paused'||A.rnd.st==='
 
 // ==================== SHOOT ====================
 async function shoot(){
-  const gid=A.grp,u=parseFloat($('inpU').value);
+  const gid=A.grp,u=parseFloat($('inpU').value),isDemo=gid===0;
   if(isNaN(u)||u<=0)return modal('<h2>⚠️ Invalid Input</h2><p>Please enter a positive speed value.</p><button class="btn-pri" onclick="closeM()">OK</button>');
   if(A.set.ang<=0||A.set.ang>=90)return modal('<h2>⚠️ Invalid Angle</h2><p>Angle must be between 0° and 90° exclusive.</p><button class="btn-pri" onclick="closeM()">OK</button>');
-  if(A.set.ma>0&&A.gd[gid-1].att>=A.set.ma)return modal('<h2>⚠️ Max Attempts Reached</h2><p>Group '+gid+' has reached the '+A.set.ma+' attempt limit.</p><button class="btn-pri" onclick="closeM()">OK</button>');
-  if(A.tMode&&A.reflNeed[gid])return modal('<h2>⚠️ Reflection Required</h2><p>Please complete the reflection before your next shot.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+  if(!isDemo&&A.set.ma>0&&A.gd[gid-1].att>=A.set.ma)return modal('<h2>⚠️ Max Attempts Reached</h2><p>Group '+gid+' has reached the '+A.set.ma+' attempt limit.</p><button class="btn-pri" onclick="closeM()">OK</button>');
+  if(!isDemo&&A.tMode&&A.reflNeed[gid])return modal('<h2>⚠️ Reflection Required</h2><p>Please complete the reflection before your next shot.</p><button class="btn-pri" onclick="closeM()">OK</button>');
 
   const res=compute(u,A.set);
   if(!res.ok)return modal('<h2>⚠️ Invalid Shot</h2><p>'+res.diag+'</p><button class="btn-pri" onclick="closeM()">OK</button>');
+
+  if(isDemo){
+    startAnim(u,res);showDiag(res);
+    $('reflBox').style.display='none';
+    $('grpStatus').textContent='🎬 Demo played — no student or scoreboard data were recorded.';
+    return;
+  }
 
   const wt=withinTL(),ta=challOn();
   let rank=null,spins=0,late=false;
@@ -905,6 +914,7 @@ function initTabs(){
 
 function initGrps(){
   const s=$('grpSel');s.innerHTML='';
+  const demo=document.createElement('button');demo.textContent='🎬 Demo — Animation Only';demo.dataset.g=0;demo.className='demo';demo.title='Use this for teacher demonstration. It does not affect group scores, attempts, or rewards.';demo.addEventListener('click',()=>selGrp(0));s.appendChild(demo);
   for(let i=1;i<=NUM_G;i++){const b=document.createElement('button');b.textContent='Group '+i;b.dataset.g=i;b.addEventListener('click',()=>selGrp(i));s.appendChild(b);}
   const ws=$('wGrp');ws.innerHTML='<option value="">-- Select --</option>';
   for(let i=1;i<=NUM_G;i++)ws.innerHTML+='<option value="'+i+'">Group '+i+'</option>';
@@ -921,12 +931,14 @@ function selGrp(g){
 
 function updGrpBtns(){
   document.querySelectorAll('#grpSel button').forEach(b=>{
-    const g=parseInt(b.dataset.g),d=A.gd[g-1];
-    b.classList.remove('won');if(d.rank!==null&&!d.late)b.classList.add('won');
+    const g=parseInt(b.dataset.g);b.classList.remove('won');
+    if(g===0)return;
+    const d=A.gd[g-1];if(d.rank!==null&&!d.late)b.classList.add('won');
   });
 }
 
 function updGrpSt(){
+  if(A.grp===0){$('grpStatus').textContent='🎬 Demo mode: animation and diagnostics only. No attempt, score, reward, or dashboard record will be saved.';return;}
   const g=A.gd[A.grp-1];
   let s='Group '+A.grp+': '+g.att+' attempt'+(g.att!==1?'s':'');
   if(g.rank!==null)s+=g.late?' | ⏰ Scored (late)':' | ✅ Scored #'+g.rank;
